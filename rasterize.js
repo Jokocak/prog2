@@ -75,21 +75,44 @@ function loadTriangles() {
         var whichSetVert; // index of vertex in current triangle set
         var whichSetTri; // index of triangle in current triangle set
         var coordArray = []; // 1D array of vertex coords for WebGL
+        var indexArray = []; // 1D array of vertex indices for WebGL
+        var vtxBufferSize = 0;
+        var vtxToAdd = []; // Cuurent vertex coordinates to add to array
+        var indexOffset = vec3.create(); // the index offset for the current set
+        var triToAdd = vec3.create(); // tri indices to add to the index array
         
         for (var whichSet=0; whichSet<inputTriangles.length; whichSet++) {
+            vec3.set(indexOffset, vtxBufferSize, vtxBufferSize. vtxBufferSize); // Update vertex offset
             
             // set up the vertex coord array
             for (whichSetVert=0; whichSetVert<inputTriangles[whichSet].vertices.length; whichSetVert++){
-                coordArray = coordArray.concat(inputTriangles[whichSet].vertices[whichSetVert]);
+                vtxToAdd = inputTriangles[whichSet].vertices[whichSetVert];
+                coordArray.push(vtxToAdd[0], vtxToAdd[1], vtxToAdd[2]);
+                //coordArray = coordArray.concat(inputTriangles[whichSet].vertices[whichSetVert]);
                 // console.log(inputTriangles[whichSet].vertices[whichSetVert]);
             }
+
+            // set up triangle index array
+            for (whichSetTri = 0; whichSetTri < inputTriangles[whichSet].triangles.length; whichSetTri++) {
+                vec3.add(triToAdd, indexOffset, inputTriangles[whichSet].triangles[whichSetTri]);
+                indexArray.push(triToAdd[0], triToAdd[1], triToAdd[2]);
+            }
+
+            vtxBufferSize += inputTriangles[whichSet].vertices.length;
+            triBufferSize += inputTriangles[whichSet].triangles.length;
         } // end for each triangle set 
+        triBufferSize *= 3; // Total number of indices
+
         // console.log(coordArray.length);
         // send the vertex coords to webGL
         vertexBuffer = gl.createBuffer(); // init empty vertex coord buffer
         gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer); // activate that buffer
         gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(coordArray),gl.STATIC_DRAW); // coords to that buffer
-        
+
+        // send triangle indices to webGL
+        triangleBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, triangleBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexArray), gl.STATIC_DRAW);
     } // end if triangles found
 } // end load triangles
 
@@ -159,7 +182,9 @@ function renderTriangles() {
     gl.bindBuffer(gl.ARRAY_BUFFER,vertexBuffer); // activate
     gl.vertexAttribPointer(vertexPositionAttrib,3,gl.FLOAT,false,0,0); // feed
 
-    gl.drawArrays(gl.TRIANGLES,0,3); // render
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, triangleBuffer);
+    gl.drawElements(gl.TRIANGLES, triBufferSize, gl.UNSIGNED_SHORT, 0);
+    //gl.drawArrays(gl.TRIANGLES,0,3); // render
 } // end render triangles
 
 
